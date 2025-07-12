@@ -1,4 +1,2 @@
-# No "providers" line needed.
-# Just specify the packages you want.
 [phases.setup]
-aptPkgs = ["ffmpeg", "libgl1"]
+aptPkgs = ["ffmpeg", "libgl1", "libfreetype6-dev"]
