@@ -1,6 +1,4 @@
-# Tell Railway's build system (Nixpacks) to use the "apt" package manager
-providers = ["apt"]
-
-# Specify the system-level packages to install during the setup phase
+# No "providers" line needed.
+# Just specify the packages you want.
 [phases.setup]
 aptPkgs = ["ffmpeg"]
