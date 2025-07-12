@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>All Frames - {{ frames_dir }}</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; color: #333; margin: 0; padding: 2em; }
+        .container { max-width: 1400px; margin: auto; }
+        h1, h2 { color: #0056b3; }
+        .header-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .download-btn { background-color: #28a745; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background-color 0.2s; }
+        .download-btn:hover { background-color: #218838; }
+        .frame-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1em; margin-top: 2em; }
+        .frame-grid a { border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s; display: block; text-decoration: none; color: inherit;}
+        .frame-grid a:hover { transform: scale(1.05); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .frame-grid img { width: 100%; height: auto; display: block; }
+        .frame-grid p { text-align: center; font-size: 0.8em; padding: 5px; margin: 0; background-color: #eee; word-wrap: break-word; }
+        .pagination { text-align: center; margin: 2em 0; }
+        .pagination a, .pagination span { display: inline-block; padding: 8px 16px; margin: 0 4px; border: 1px solid #ddd; border-radius: 4px; background-color: white; text-decoration: none; color: #007bff; }
+        .pagination a:hover { background-color: #eee; }
+        .pagination span.current { background-color: #007bff; color: white; border-color: #007bff; }
+        .pagination span.disabled { color: #ccc; background-color: #f9f9f9; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-controls">
+            <div>
+                <h1>All Extracted Frames</h1>
+                <h2>From: {{ frames_dir }}</h2>
+                <a href="/">← Back to Main Page</a>
+            </div>
+            <div>
+                <a href="{{ url_for('download_zip', frames_dir=frames_dir) }}" class="download-btn">Download All Frames as ZIP</a>
+            </div>
+        </div>
+        <div class="pagination">
+            {% if current_page > 1 %}<a href="{{ url_for('view_frames', frames_dir=frames_dir, page=current_page-1) }}">« Previous</a>{% else %}<span class="disabled">« Previous</span>{% endif %}
+            <span class="current">Page {{ current_page }} of {{ total_pages }}</span>
+            {% if current_page < total_pages %}<a href="{{ url_for('view_frames', frames_dir=frames_dir, page=current_page+1) }}">Next »</a>{% else %}<span class="disabled">Next »</span>{% endif %}
+        </div>
+        <div class="frame-grid">
+            {% for frame_path in frames %}
+                <a href="{{ url_for('view_image', image_path=frame_path) }}" target="_blank">
+                    <img src="{{ url_for('send_upload', path=frame_path) }}" alt="{{ frame_path.split('/')[-1] }}" loading="lazy">
+                    <p>{{ frame_path.split('/')[-1] }}</p>
+                </a>
+            {% endfor %}
+        </div>
+        <div class="pagination">
+            {% if current_page > 1 %}<a href="{{ url_for('view_frames', frames_dir=frames_dir, page=current_page-1) }}">« Previous</a>{% else %}<span class="disabled">« Previous</span>{% endif %}
+            <span class="current">Page {{ current_page }} of {{ total_pages }}</span>
+            {% if current_page < total_pages %}<a href="{{ url_for('view_frames', frames_dir=frames_dir, page=current_page+1) }}">Next »</a>{% else %}<span class="disabled">Next »</span>{% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Forensic Analyzer</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; color: #333; margin: 0; padding: 2em; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 2em; }
+        .upload-form { margin-top: 1em; }
+        input[type="file"] { border: 1px solid #ccc; padding: 10px; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        input[type="submit"] { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; margin-top: 1em; }
+        input[type="submit"]:hover { background: #0056b3; }
+        .loader { display: none; margin: 1em auto; border: 8px solid #f3f3f3; border-radius: 50%; border-top: 8px solid #3498db; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Media Forensic Analyzer</h1>
+        <p>Choose an option below to begin your analysis.</p>
+
+        <div class="upload-section">
+            <h2>1. Full Video Analysis</h2>
+            <p>Upload a video to get a full forensic report (Scene Cuts, Audio Anomalies, etc.).</p>
+            <form action="/upload-video" method="post" enctype="multipart/form-data" class="upload-form" onsubmit="showLoader(this)">
+                <input type="file" name="file" accept="video/*" required>
+                <input type="submit" value="Analyze Video">
+            </form>
+        </div>
+
+        <div class="upload-section">
+            <h2>2. Extract Frames from Video</h2>
+            <p>Quickly deconstruct a video into all its individual frames for manual inspection.</p>
+            <form action="/extract-only" method="post" enctype="multipart/form-data" class="upload-form" onsubmit="showLoader(this)">
+                <input type="file" name="file" accept="video/*" required>
+                <input type="submit" value="Extract All Frames">
+            </form>
+        </div>
+
+        <div class="upload-section">
+            <h2>3. Analyze a Single Image</h2>
+            <p>Upload a single image for analysis (ELA, Histogram, etc.).</p>
+            <form action="/upload-image" method="post" enctype="multipart/form-data" class="upload-form" onsubmit="showLoader(this)">
+                <input type="file" name="file" accept="image/*" required>
+                <input type="submit" value="Analyze Single Image">
+            </form>
+        </div>
+
+        <div class="upload-section">
+            <h2>4. Compare Multiple Images</h2>
+            <p>Upload multiple images for side-by-side analysis.</p>
+            <form action="/upload-multiple-images" method="post" enctype="multipart/form-data" class="upload-form" onsubmit="showLoader(this)">
+                <input type="file" name="files" accept="image/*" required multiple>
+                <input type="submit" value="Analyze Multiple Images">
+            </form>
+        </div>
+        
+        <div class="loader-container" style="text-align: center; margin-top: 2em;">
+             <div class="loader"></div>
+        </div>
+    </div>
+    <script>
+        function showLoader(form) {
+            document.querySelector('.loader').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

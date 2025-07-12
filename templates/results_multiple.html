@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multiple Image Analysis Results</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; color: #333; margin: 0; padding: 2em; }
+        .container { max-width: 1200px; margin: auto; }
+        h1 { color: #0056b3; }
+        .result-card { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 2em; }
+        h2, h3 { color: #0056b3; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2em; align-items: start; }
+        .grid img { max-width: 100%; border-radius: 4px; border: 1px solid #ddd; }
+        pre { background: #eee; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        .section { margin-top: 2em; }
+        .checklist ul { list-style-type: '🔎 '; }
+        li { margin-bottom: 0.5em; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .plot-container img { max-width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multiple Image Analysis Results</h1>
+        <a href="/">← Analyze More Files</a>
+        {% for result in results %}
+        <div class="result-card">
+            <h2>Analysis for: {{ result.filename }}</h2>
+            <div class="grid section">
+                <div>
+                    <h3>Original Image</h3>
+                    <img src="{{ url_for('send_upload', path=result.filename) }}" alt="Original Image">
+                </div>
+                <div>
+                    <h3>Error Level Analysis (ELA)</h3>
+                    {% if result.ela_image_b64 %}
+                        <img src="{{ result.ela_image_b64 }}" alt="ELA Image">
+                        <p><strong>Interpretation:</strong> Bright, sharp, or distinctly textured areas can suggest that part of the image was pasted from another source.</p>
+                    {% else %}
+                        <p>Could not generate ELA image.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="section plot-container">
+                <h3>Color Histogram</h3>
+                {% if result.histogram_plot %}
+                    <img src="{{ result.histogram_plot }}" alt="Color Histogram">
+                    <p><strong>Interpretation:</strong> Smooth curves are normal. Gaps or spikes can indicate editing.</p>
+                {% else %}
+                    <p>Could not generate histogram plot.</p>
+                {% endif %}
+            </div>
+            <div class="section checklist">
+                <h3>GAN / AI-Generated Content Analysis (Manual Check)</h3>
+                <ul>
+                    <li><b>Unnatural Anatomy:</b> Check hands, teeth, and ears.</li>
+                    <li><b>"Waxy" or "Airbrushed" Skin:</b> Look for overly smooth textures.</li>
+                    <li><b>Inconsistent Details:</b> Check earrings, patterns, and background text.</li>
+                    <li><b>Bizarre Backgrounds:</b> Look for melting objects or illogical structures.</li>
+                </ul>
+            </div>
+            <div class="section">
+                <h3>Source Verification (OSINT)</h3>
+                <ul>
+                    <li><a href="https://www.google.com/searchbyimage?image_url={{ url_for('send_upload', path=result.filename, _external=True) }}" target="_blank">Search on Google Images</a></li>
+                    <li><a href="https://tineye.com/search?url={{ url_for('send_upload', path=result.filename, _external=True) }}" target="_blank">Search on TinEye</a></li>
+                </ul>
+            </div>
+            <div class="section">
+                <h3>EXIF Metadata</h3>
+                <pre>{{ result.metadata | tojson(indent=4) }}</pre>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

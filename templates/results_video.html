@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Video Analysis Workbench - {{ filename }}</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; color: #333; margin: 0; padding: 1em; overflow: hidden; }
+        .container { max-width: 95%; margin: auto; }
+        h1, h2, h3 { color: #0056b3; margin-top: 0; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .main-layout { display: grid; grid-template-columns: 3fr 2fr; gap: 1.5em; height: calc(100vh - 100px); margin-top: 1em; }
+        .video-column, .analysis-column { background: white; padding: 1.5em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); overflow-y: auto; }
+        .video-column video { width: 100%; border-radius: 4px; background: black; }
+        .forensic-controls { border: 2px solid #e9ecef; border-radius: 8px; padding: 1em; margin-top: 1.5em; }
+        .forensic-controls h3 { margin-top: 0; font-size: 1.1em; }
+        .control-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1em; align-items: center; }
+        .control-panel button { font-size: 0.9em; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background-color: white; cursor: pointer; transition: background-color 0.2s; }
+        .control-panel button:hover { background-color: #f0f0f0; }
+        .control-panel .goto-frame { display: flex; align-items: center; gap: 5px; }
+        .control-panel .goto-frame input[type="number"] { width: 80px; text-align: center; font-size: 0.9em; padding: 7px; }
+        .live-info { text-align: center; margin-top: 1em; padding: 10px; background-color: #e9ecef; border-radius: 4px; }
+        #current-frame-display { font-family: monospace; font-size: 1.5em; color: #c82333; font-weight: bold; }
+        .analysis-column .section { margin-bottom: 2.5em; }
+        pre { background: #eee; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        .anomaly { color: #c82333; font-weight: bold; display: block; margin-top: 5px; }
+        .warning { color: #e67e22; font-weight: bold; display: block; margin-top: 5px; }
+        .plot-container { position: relative; }
+        .plot-container p { user-select: text; }
+        .plot-container img { max-width: 100%; display: block; }
+        .playhead { position: absolute; top: 0; left: 0; width: 2px; height: 100%; background-color: rgba(255, 0, 0, 0.7); pointer-events: none; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Live Video Analysis Workbench</h1>
+        <a href="/">← Analyze Another File</a>
+        <div class="main-layout">
+            <div class="video-column">
+                <h2>{{ filename }}</h2>
+                <video id="main-video" width="100%" controls muted src="{{ url_for('send_upload', path=filename) }}">Your browser does not support the video tag.</video>
+                <div class="live-info"><div id="current-frame-display">Frame: 0</div></div>
+                <div class="forensic-controls">
+                    <h3>Forensic Controls</h3>
+                    <div class="control-panel">
+                        <div class="frame-step"><button id="prev-frame-btn">« Prev Frame</button><button id="next-frame-btn">Next Frame »</button></div>
+                        <div class="goto-frame"><label for="goto-input">Go to Frame:</label><input type="number" id="goto-input" min="0"><button id="goto-btn">Go</button></div>
+                    </div>
+                </div>
+                <hr style="margin-top: 1.5em;"><h3>Video Metadata</h3><pre>{{ metadata | tojson(indent=4) }}</pre>
+            </div>
+            <div class="analysis-column">
+                <h2>Forensic Analysis</h2>
+                <div class="section">
+                    <h3>Visual Scene Change Analysis (Powered by PySceneDetect)</h3>
+                    <p>
+                        <strong>Automated Interpretation:</strong>
+                        {% if scene_report.changes %}
+                            <span class="anomaly">WARNING: Potential scene changes (cuts or fades) were detected at the end of frames: <strong>{{ scene_report.changes|join(', ') }}</strong>. These are high-confidence points for manual investigation.</span>
+                        {% else %}
+                            No significant visual scene changes were automatically detected by the algorithm.
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="section plot-container">
+                    <h3>Audio Waveform (Amplitude)</h3>
+                    {% if waveform_plot %}<img src="{{ waveform_plot }}" alt="Audio Waveform"><div class="playhead"></div>{% endif %}
+                    <p>
+                        <strong>Automated Interpretation:</strong>
+                        {% if audio_anomalies and audio_anomalies.amplitude %}
+                            <span class="warning">WARNING:</span> A sudden spike in audio volume detected near frames: <strong>{{ audio_anomalies.amplitude|join(', ') }}</strong>.
+                        {% else %}
+                            Audio amplitude appears consistent.
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="section plot-container">
+                    <h3>Audio Spectrogram (Frequency)</h3>
+                    {% if spectrogram_plot %}<img src="{{ spectrogram_plot }}" alt="Audio Spectrogram"><div class="playhead"></div>{% endif %}
+                    <p>
+                        <strong>Automated Interpretation:</strong>
+                        {% if audio_anomalies and audio_anomalies.frequency %}
+                             <span class="warning">WARNING:</span> An abrupt shift in audio frequency detected near frames: <strong>{{ audio_anomalies.frequency|join(', ') }}</strong>.
+                        {% else %}
+                            The audio's frequency profile appears consistent.
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="section">
+                    <h3>Deconstruct Video (Advanced)</h3>
+                    <p>Extract every frame for manual inspection.</p>
+                    <form action="{{ url_for('deconstruct_video', filename=filename) }}" method="post" onsubmit="this.querySelector('input[type=submit]').disabled=true; this.querySelector('input[type=submit]').value='Processing...';">
+                        <input type="submit" value="Extract All Frames" style="background-color: #c82333; border-color: #bd2130;">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('main-video');
+            const frameDisplay = document.getElementById('current-frame-display');
+            const plotContainers = document.querySelectorAll('.plot-container');
+            const prevFrameBtn = document.getElementById('prev-frame-btn');
+            const nextFrameBtn = document.getElementById('next-frame-btn');
+            const gotoInput = document.getElementById('goto-input');
+            const gotoBtn = document.getElementById('goto-btn');
+            let fps = 30; let totalFrames = {{ total_frames or 0 }}; let frame_duration = 1 / fps;
+            const metadata = {{ metadata|tojson }};
+            if (metadata && metadata.avg_frame_rate) {
+                const [num, den] = metadata.avg_frame_rate.split('/');
+                if (den !== '0') { fps = parseFloat(num) / parseFloat(den); }
+            }
+            frame_duration = 1 / fps;
+            if (totalFrames > 0) { gotoInput.max = totalFrames - 1; }
+            function updateDisplays() {
+                const currentTime = video.currentTime;
+                const currentFrame = Math.round(currentTime * fps);
+                frameDisplay.textContent = `Frame: ${currentFrame}`;
+                plotContainers.forEach(container => {
+                    const playhead = container.querySelector('.playhead');
+                    if (!playhead) return;
+                    let progressPercent = (video.duration > 0) ? (currentTime / video.duration) * 100 : 0;
+                    playhead.style.left = `${Math.max(0, Math.min(100, progressPercent))}%`;
+                });
+            }
+            function stepFrame(direction) {
+                const newTime = video.currentTime + (frame_duration * direction);
+                video.currentTime = Math.max(0, Math.min(video.duration, newTime));
+            }
+            function goToFrame(frameNumber) {
+                const targetTime = frameNumber / fps;
+                video.currentTime = Math.max(0, Math.min(video.duration, targetTime));
+            }
+            prevFrameBtn.addEventListener('click', () => stepFrame(-1));
+            nextFrameBtn.addEventListener('click', () => stepFrame(1));
+            gotoBtn.addEventListener('click', () => {
+                const frameNum = parseInt(gotoInput.value, 10);
+                if (!isNaN(frameNum)) { goToFrame(frameNum); }
+            });
+            gotoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { gotoBtn.click(); }});
+            video.addEventListener('timeupdate', updateDisplays);
+            video.addEventListener('seeked', updateDisplays);
+            video.addEventListener('play', () => { plotContainers.forEach(c => { const ph = c.querySelector('.playhead'); if(ph) ph.style.display = 'block'; }); });
+            video.addEventListener('loadedmetadata', () => {
+                if (video.duration > 0 && totalFrames > 0) {
+                    fps = totalFrames / video.duration;
+                    frame_duration = 1 / fps;
+                }
+                updateDisplays();
+            });
+        });
+    </script>
+</body>
+</html>

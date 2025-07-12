@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Analysis Results</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; color: #333; margin: 0; padding: 2em; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0056b3; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2em; align-items: start; }
+        .grid img { max-width: 100%; border-radius: 4px; border: 1px solid #ddd; }
+        pre { background: #eee; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        .section { margin-top: 2em; }
+        .checklist ul { list-style-type: '🔎 '; }
+        li { margin-bottom: 0.5em; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .plot-container img { max-width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Analysis for: {{ filename }}</h1>
+        <a href="/">← Analyze Another File</a>
+
+        <div class="grid section">
+            <div>
+                <h2>Original Image</h2>
+                <img src="{{ url_for('send_upload', path=filename) }}" alt="Original Image">
+            </div>
+            <div>
+                <h2>Error Level Analysis (ELA)</h2>
+                {% if ela_image_b64 %}
+                    <img src="{{ ela_image_b64 }}" alt="ELA Image">
+                    <p><strong>Interpretation:</strong> This shows differences in compression levels. Uniform noise is normal. Bright, sharp, or distinctly textured areas (especially around objects) can suggest that part of the image was pasted from another source with a different compression history.</p>
+                {% else %}
+                    <p>Could not generate ELA image.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="section plot-container">
+            <h2>Color Histogram</h2>
+            {% if histogram_plot %}
+                <img src="{{ histogram_plot }}" alt="Color Histogram">
+                <p><strong>Interpretation:</strong> This graph shows the distribution of red, green, and blue pixels. Smooth curves are normal. Gaps, spikes, or "comb-like" patterns can indicate heavy editing, color manipulation, or pasting content from another image.</p>
+            {% else %}
+                <p>Could not generate histogram plot.</p>
+            {% endif %}
+        </div>
+
+        <div class="section checklist">
+            <h2>GAN / AI-Generated Content Analysis (Manual Check)</h2>
+            <p>Automated detection is difficult. Carefully check the image for these common AI artifacts:</p>
+            <ul>
+                <li><b>Unnatural Anatomy:</b> Look closely at hands, teeth, and ears.</li>
+                <li><b>"Waxy" or "Airbrushed" Skin:</b> Skin texture may look overly smooth.</li>
+                <li><b>Inconsistent Details:</b> Check for mismatched earrings or illogical patterns.</li>
+                <li><b>Bizarre Backgrounds:</b> Look for melting objects or illogical structures.</li>
+            </ul>
+        </div>
+        
+        <div class="section">
+            <h2>Source Verification (OSINT)</h2>
+            <p>Check if this image has appeared online before. This is the most effective way to debunk out-of-context images.</p>
+            <ul>
+                <li><a href="https://www.google.com/searchbyimage?image_url={{ url_for('send_upload', path=filename, _external=True) }}" target="_blank">Search on Google Images</a></li>
+                <li><a href="https://tineye.com/search?url={{ url_for('send_upload', path=filename, _external=True) }}" target="_blank">Search on TinEye</a></li>
+                <li><a href="https://yandex.com/images/search?rpt=imageview&url={{ url_for('send_upload', path=filename, _external=True) }}" target="_blank">Search on Yandex</a></li>
+            </ul>
+        </div>
+        
+        <div class="section">
+            <h2>EXIF Metadata</h2>
+            <pre>{{ metadata | tojson(indent=4) }}</pre>
+        </div>
+    </div>
+</body>
+</html>

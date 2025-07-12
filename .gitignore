@@ -1,0 +1,14 @@
+# Python virtual environment
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# User-uploaded media files
+# We don't want to commit these to the repository
+static/uploads/*
+
+# Common IDE/editor configuration folders
+.vscode/
+.idea/

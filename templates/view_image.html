@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Viewer - {{ image_path.split('/')[-1] }}</title>
+    <style>
+        body { margin: 0; background: #333; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; }
+        .info-bar {
+            background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px;
+            font-family: sans-serif; font-size: 1.2em; position: fixed; top: 10px;
+        }
+        .image-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            cursor: zoom-in;
+        }
+        .image-container img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+        .image-container.zoomed {
+            cursor: zoom-out;
+        }
+        .image-container.zoomed img {
+            transform: scale(2.5); /* Adjust zoom level here */
+        }
+    </style>
+</head>
+<body>
+    <div class="info-bar">{{ image_path.split('/')[-1] }}</div>
+    <div class="image-container" id="zoom-container">
+        <img src="{{ url_for('send_upload', path=image_path) }}" alt="Full size image">
+    </div>
+    <script>
+        // Simple toggle zoom on click
+        const container = document.getElementById('zoom-container');
+        container.addEventListener('click', () => {
+            container.classList.toggle('zoomed');
+        });
+    </script>
+</body>
+</html>
