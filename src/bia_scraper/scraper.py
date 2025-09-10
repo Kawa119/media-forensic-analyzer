@@ -8,7 +8,7 @@ from typing import Iterable, List, Optional
 import requests
 from bs4 import BeautifulSoup
 
-from .models import Company
+from .models import Company, EMAIL_RE, PHONE_RE
 from .database import Database
 
 
@@ -81,10 +81,10 @@ class YellGeScraper:
     def _parse_company(self, cid: int, html: str) -> Company:
         soup = BeautifulSoup(html, "lxml")
         name = self._extract_text(soup, "h1")
-        phone = self._extract_text(soup, "a[href^='tel']")
-        email = self._extract_text(soup, "a[href^='mailto']")
+        phone = self._extract_phone(soup)
+        email = self._extract_email(soup)
         address = self._extract_text(soup, "address")
-        website = self._extract_text(soup, "a.website")
+        website = self._extract_website(soup)
         return Company(
             identifier=str(cid),
             name=name,
@@ -100,6 +100,46 @@ class YellGeScraper:
         element = soup.select_one(selector)
         if element:
             return element.get_text(strip=True)
+        return None
+
+    @staticmethod
+    def _extract_phone(soup: BeautifulSoup) -> Optional[str]:
+        link = soup.select_one("a[href^='tel']")
+        if link:
+            href = link.get("href", "")
+            if href:
+                return href.split(":", 1)[-1].strip()
+            return link.get_text(strip=True)
+        text = soup.find(string=PHONE_RE)
+        if text:
+            match = PHONE_RE.search(text)
+            if match:
+                return match.group(0)
+        return None
+
+    @staticmethod
+    def _extract_email(soup: BeautifulSoup) -> Optional[str]:
+        link = soup.select_one("a[href^='mailto']")
+        if link:
+            href = link.get("href", "")
+            if href:
+                return href.split(":", 1)[-1].strip()
+            return link.get_text(strip=True)
+        text = soup.find(string=EMAIL_RE)
+        if text:
+            match = EMAIL_RE.search(text)
+            if match:
+                return match.group(0)
+        return None
+
+    @staticmethod
+    def _extract_website(soup: BeautifulSoup) -> Optional[str]:
+        link = soup.select_one("a.website, a[href^='http']")
+        if link and link.has_attr("href"):
+            href = link["href"].strip()
+            # Avoid returning yell.ge internal links
+            if href and not href.startswith("/") and "yell.ge" not in href:
+                return href
         return None
 
 

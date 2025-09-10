@@ -22,7 +22,7 @@ def main() -> None:
     args = parse_args()
     db = Database()
     scraper = YellGeScraper(db=db, proxies=args.proxy)
-    companies = list(scraper.scrape_range(args.start, args.end))
+    companies = scraper.scrape_range(args.start, args.end)
     if args.export:
         export_to_csv(companies, args.export)
     else:

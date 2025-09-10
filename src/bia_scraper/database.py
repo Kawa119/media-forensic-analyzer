@@ -1,10 +1,12 @@
 import sqlite3
+import threading
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable
+
 from .models import Company
 
-DB_PATH = Path('yell_scraper.db')
+DB_PATH = Path("yell_scraper.db")
 
 
 class Database:
@@ -12,21 +14,31 @@ class Database:
 
     def __init__(self, path: Path = DB_PATH):
         self.path = path
+        self.conn = sqlite3.connect(
+            self.path, check_same_thread=False, timeout=30
+        )
+        # Enable write-ahead logging for better concurrency
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.lock = threading.Lock()
         self._ensure_schema()
 
     @contextmanager
-    def connect(self):
-        conn = sqlite3.connect(self.path)
-        try:
-            yield conn
-            conn.commit()
-        finally:
-            conn.close()
+    def _cursor(self):
+        """Thread-safe cursor context manager."""
+        with self.lock:
+            cur = self.conn.cursor()
+            try:
+                yield cur
+                self.conn.commit()
+            except sqlite3.OperationalError:
+                self.conn.rollback()
+                raise
+            finally:
+                cur.close()
 
     def _ensure_schema(self) -> None:
-        with self.connect() as conn:
-            c = conn.cursor()
-            c.execute(
+        with self._cursor() as cur:
+            cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS companies (
                     identifier TEXT PRIMARY KEY,
@@ -38,7 +50,7 @@ class Database:
                 )
                 """
             )
-            c.execute(
+            cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS progress (
                     last_id INTEGER
@@ -46,15 +58,15 @@ class Database:
                 """
             )
             # initialize progress if empty
-            c.execute("SELECT COUNT(*) FROM progress")
-            if c.fetchone()[0] == 0:
-                c.execute("INSERT INTO progress(last_id) VALUES (0)")
+            cur.execute("SELECT COUNT(*) FROM progress")
+            if cur.fetchone()[0] == 0:
+                cur.execute("INSERT INTO progress(last_id) VALUES (0)")
 
     def save_company(self, company: Company) -> None:
         if not company.is_valid():
             return
-        with self.connect() as conn:
-            conn.execute(
+        with self._cursor() as cur:
+            cur.execute(
                 """
                 INSERT OR REPLACE INTO companies
                 (identifier, name, phone, email, address, website)
@@ -71,17 +83,21 @@ class Database:
             )
 
     def update_progress(self, last_id: int) -> None:
-        with self.connect() as conn:
-            conn.execute("UPDATE progress SET last_id=?", (last_id,))
+        with self._cursor() as cur:
+            cur.execute("UPDATE progress SET last_id=?", (last_id,))
 
     def get_last_id(self) -> int:
-        with self.connect() as conn:
-            cur = conn.execute("SELECT last_id FROM progress")
+        with self._cursor() as cur:
+            cur.execute("SELECT last_id FROM progress")
             row = cur.fetchone()
             return row[0] if row else 0
 
     def all_companies(self) -> Iterable[Company]:
-        with self.connect() as conn:
-            cur = conn.execute("SELECT * FROM companies")
+        with self._cursor() as cur:
+            cur.execute("SELECT * FROM companies")
             for row in cur:
                 yield Company(*row)
+
+    def close(self) -> None:
+        self.conn.close()
+
